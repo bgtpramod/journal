@@ -143,8 +143,8 @@ ${box('Exit Triggers','<div class="empty">0 trades</div>')}
 ${box('Proficiency','<div class="empty">0 tags</div>')}
 </div>`};
 
-const trRow=t=>`<tr><td>${t.date}</td><td><b style="cursor:pointer;color:var(--pr)" onclick="location.hash='#symbol/${t.symbol}'">${t.symbol}</b></td><td><span class="tag">${t.setup}</span></td><td>${inr(t.entry).replace('₹','₹')}.00</td><td>${t.tf}</td><td>${(risk(t)/S.cap*100).toFixed(2)}%</td><td class="${cls(pnl(t))}">${inr(pnl(t))}</td><td class="${cls(pnl(t))}">${pc(pnl(t)/S.cap*100)}</td><td>${isOpen(t)?'–':(pnl(t)/risk(t)).toFixed(2)}</td><td>${isOpen(t)?'<span class="open">Open</span>':'Closed'}</td><td class="g">${t.plan?'✓':''}</td><td>${t.exitDate||'–'}</td><td><button class="ib" onclick="del(${t.id})">🗑</button></td></tr>`;
-P.Trades=()=>`<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center"><button class="btn" onclick="addT()">+ Add Trade</button><input id="q" placeholder="Search symbol, setup…" style="max-width:320px" oninput="fq()"><span class="mu mono" style="margin-left:auto">${yt().length} trades</span></div>
+const trRow=t=>`<tr><td>${t.date}</td><td><b style="cursor:pointer;color:var(--pr)" onclick="location.hash='#symbol/${t.symbol}'">${t.symbol}</b></td><td><span class="tag">${t.setup}</span></td><td>${inr(t.entry).replace('₹','₹')}.00</td><td>${t.tf}</td><td>${(t.entry*t.qty/S.cap*100).toFixed(2)}%</td><td class="${cls(pnl(t))}">${inr(pnl(t))}</td><td class="${cls(pnl(t))}">${pc(pnl(t)/S.cap*100)}</td><td>${isOpen(t)?'–':(pnl(t)/risk(t)).toFixed(2)}</td><td>${isOpen(t)?'<span class="open">Open</span>':'Closed'}</td><td class="g">${t.plan?'✓':''}</td><td>${t.exitDate||'–'}</td><td><button class="ib" onclick="del(${t.id})">🗑</button></td></tr>`;
+P.Trades=()=>`<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center"><button class="btn" onclick="addT()">+ Add Trade</button><input id="q" placeholder="Search symbol, setup…" style="max-width:320px" oninput="fq()"><button class="btn o" onclick="rfp()">⟳ Refresh prices</button>${S.fail?'<span class="r mono" style="font-size:12px">⚠ Live price nahi mili (Settings me proxy daalo)</span>':''}<span class="mu mono" style="margin-left:auto">${yt().length} trades</span></div>
 <div class="card" style="overflow-x:auto"><table id="tt"><thead><tr><th>DATE</th><th>SYMBOL</th><th>SETUP</th><th>ENTRY</th><th>TF</th><th>POS SIZE %</th><th>P/L ₹</th><th>PF%</th><th>R:R</th><th>STATUS</th><th>PLAN</th><th>EXIT DATE</th><th></th></tr></thead><tbody>${yt().map(trRow).join('')||'<tr><td colspan=13 class="empty">No trades yet</td></tr>'}</tbody></table></div>`;
 window.fq=()=>{const v=$('#q').value.toLowerCase();$('#tt tbody').innerHTML=yt().filter(t=>(t.symbol+t.setup).toLowerCase().includes(v)).map(trRow).join('')};
 window.del=id=>{if(confirm('Delete this trade?')){S.trades=S.trades.filter(t=>t.id!=id);save();go()}};
@@ -189,7 +189,7 @@ $('#m1').textContent=`QTY ${q1} · Max loss ${f(q1*d)}`;$('#m2').textContent=`QT
 $('#sc').innerHTML='<tr><th>RISK %</th><th>MAX LOSS</th><th>QTY</th><th>EXPOSURE</th><th>ALLOC %</th></tr>'+[.25,.5,.75,1,1.5,2].map(r=>{const qq=Math.floor(C*r/100/d);return`<tr style="cursor:pointer;${r==R?'background:var(--soft)':''}" onclick="$('#r0').value=${r};calc()"><td class="${r<=.75?'g':r<=1.5?'y':'r'}"><b>${r}%</b></td><td class="r">${f(C*r/100)}</td><td><b>${qq}</b></td><td>${f(qq*E)}</td><td>${(qq*E/C*100).toFixed(1)}%</td></tr>`}).join('')};
 
 const TF={'1m':['5d','1m'],'3m':['1mo','2m'],'5m':['1mo','5m'],'15m':['1mo','15m'],'75m':['2mo','90m'],'1D':['1y','1d']};let curTF='1D';
-const PROXIES=[u=>'https://corsproxy.io/?'+encodeURIComponent(u),u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)];
+const PROXIES=[u=>'https://corsproxy.io/?'+encodeURIComponent(u),u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://api.codetabs.com/v1/proxy?quest='+u,u=>'https://thingproxy.freeboard.io/fetch/'+u];
 async function yf(sym,range,int){const tk=sym.includes('.')?sym:sym+'.'+(S.sfx||'NS'),url=`https://query1.finance.yahoo.com/v8/finance/chart/${tk}?range=${range}&interval=${int}`,ck='px_'+tk+range+int;
 try{const c=JSON.parse(localStorage.getItem(ck));if(c&&Date.now()-c.t<3e5)return c.d}catch(e){}
 const list=[...(S.proxy?[u=>S.proxy+encodeURIComponent(u)]:[]),...PROXIES];
@@ -218,7 +218,7 @@ return`<svg id="chs" viewBox="0 0 ${W} ${H+V}" style="width:100%;display:block;c
 <line id="hl" x1="0" x2="${W}" stroke="var(--mu)" stroke-dasharray="4" style="display:none"/><line id="hv" y1="0" y2="${H}" stroke="var(--mu)" stroke-dasharray="4" style="display:none"/><rect id="hb" x="${W-74}" width="74" height="18" fill="#1f2937" style="display:none"/><text id="ht" x="${W-37}" text-anchor="middle" font-size="12" fill="#fff" style="display:none"></text></svg>`}
 window.xh=e=>{const r=$('#chs').getBoundingClientRect(),yy=(e.clientY-r.top)/r.height*(_ch.H+_ch.V),xx=(e.clientX-r.left)/r.width*1000;if(yy>_ch.H)return xl();const v=_ch.mx-(yy-10)/(_ch.H-20)*(_ch.mx-_ch.mn);['hl','hv','hb','ht'].forEach(i=>$('#'+i).style.display='');$('#hl').setAttribute('y1',yy);$('#hl').setAttribute('y2',yy);$('#hv').setAttribute('x1',xx);$('#hv').setAttribute('x2',xx);$('#hb').setAttribute('y',yy-9);$('#ht').setAttribute('y',yy+4);$('#ht').textContent=v.toFixed(2)};
 window.xl=()=>['hl','hv','hb','ht'].forEach(i=>$('#'+i)&&($('#'+i).style.display='none'));
-window.rfp=async()=>{for(const t of S.trades.filter(isOpen)){const d=await yf(t.symbol,'5d','1d');if(d&&d.price)t.cmp=d.price}S.upd=Date.now();save();go()};
+window.rfp=async()=>{S.fail=false;for(const t of S.trades.filter(isOpen)){const d=await yf(t.symbol,'5d','1d');if(d&&d.price)t.cmp=d.price;else S.fail=true}S.upd=Date.now();save();go()};
 
 P.Settings=()=>{const lists={'Setup Patterns':setups,'Proficiency Tags':['Emotional Control','Exited in Strength','Good Entry','Good Trailing','Protected Breakeven','Small SL'],'Growth Areas':['Biased Analysis','Booked Early',"Didn't Book Loss",'FOMO','Illiquid Stock','Illogical SL'],'Exit Triggers':['Breakeven exit','Market Pressure','R multiples','Random','Rejection','Setup Failed']};
 return`<h1>Settings</h1><p class="sub">Manage your journal preferences and data</p>
@@ -239,10 +239,10 @@ const fields=[['symbol','Symbol','text'],['date','Date','date'],['entry','Entry'
 $('#tf').innerHTML=fields.map(([k,l,t])=>`<div><label>${l}</label><input id="f_${k}" type="${t}"></div>`).join('')+`<div><label>Setup</label><select id="f_setup">${setups.map(s=>`<option>${s}</option>`).join('')}</select></div>`;
 window.addT=()=>{$('#f_date').value=new Date().toISOString().slice(0,10);$('#f_tf').value='1D';md.classList.add('on')};
 $('#sv').onclick=()=>{const g=k=>$('#f_'+k).value,e=+g('entry'),q=+g('qty');if(!g('symbol')||!e||!q)return alert('Symbol, entry and qty are required');
-const x=g('exit')?+g('exit'):null;S.trades.push({id:Date.now(),date:g('date'),symbol:g('symbol').toUpperCase(),setup:g('setup'),tf:g('tf'),entry:e,sl:+g('sl')||e*.98,qty:q,cmp:+g('cmp')||e,exit:x,exitDate:x?g('date'):null,plan:true});save();md.classList.remove('on');go()};
+const x=g('exit')?+g('exit'):null;S.trades.push({id:Date.now(),date:g('date'),symbol:g('symbol').toUpperCase(),setup:g('setup'),tf:g('tf'),entry:e,sl:+g('sl')||e*.98,qty:q,cmp:+g('cmp')||e,exit:x,exitDate:x?g('date'):null,plan:true});S.upd=0;save();md.classList.remove('on');go()};
 
 function go(){const h=location.hash.slice(1),sym=h.startsWith('symbol/')?decodeURIComponent(h.slice(7)):null,p=sym?'Trades':(pages.find(x=>x.toLowerCase()==h)||'Dashboard');$('#ttl').textContent=sym?'Symbol Analysis':p;$('#yr').textContent=S.year;document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.p==p));$('#view').innerHTML=sym?P.Symbol(sym):P[p]();
-if(sym)loadC(sym);if(p=='Positions'&&(!S.upd||Date.now()-S.upd>3e5))rfp();
+if(sym)loadC(sym);if(!sym&&['Positions','Trades','Dashboard','Analytics','Calendar'].includes(p)&&(!S.upd||Date.now()-S.upd>3e5)&&!window._rf){window._rf=1;rfp().finally(()=>window._rf=0)}
 if(p=='Calculator'){document.querySelectorAll('#view input').forEach(i=>i.oninput=calc);calc()}
 if(p=='Import'){const dz=$('#dz');fi.onchange=()=>fi.files[0]&&imp(fi.files[0]);dz.ondragover=e=>e.preventDefault();dz.ondrop=e=>{e.preventDefault();imp(e.dataTransfer.files[0])}}}
 addEventListener('hashchange',go);go();
